@@ -1,13 +1,14 @@
 # RETO1 — docker-compose.yml
 #
 # Estado actual: db + los 8 microservicios CRUD (Startups y
-# Technologies) + auth-service. Gateway y frontend se agregan en pasos
-# posteriores.
+# Technologies) + auth-service + gateway (nginx). Frontend se agrega en
+# el paso siguiente.
 #
 # Los bloques x-* son anclas YAML: agrupan las variables de entorno que
-# comparten varios servicios (conexion a DB, y DB + JWT_SECRET para los
-# protegidos) para no repetirlas servicio por servicio — mismo
-# principio de "sin logica duplicada" que shared/, aplicado al compose.
+# comparten varios servicios (conexion a DB, DB + JWT_SECRET para los
+# protegidos, y FRONTEND_ORIGIN para CORS en los 9 microservicios) para
+# no repetirlas servicio por servicio — mismo principio de "sin logica
+# duplicada" que shared/, aplicado al compose.
 
 x-db-env: &db-env
   DB_HOST: db
@@ -15,6 +16,7 @@ x-db-env: &db-env
   DB_NAME: ${DB_NAME}
   DB_USER: ${DB_USER}
   DB_PASSWORD: ${DB_PASSWORD}
+  FRONTEND_ORIGIN: ${FRONTEND_ORIGIN}
 
 x-db-env-protegido: &db-env-protegido
   DB_HOST: db
@@ -23,6 +25,7 @@ x-db-env-protegido: &db-env-protegido
   DB_USER: ${DB_USER}
   DB_PASSWORD: ${DB_PASSWORD}
   JWT_SECRET: ${JWT_SECRET}
+  FRONTEND_ORIGIN: ${FRONTEND_ORIGIN}
 
 services:
   db:
@@ -140,9 +143,27 @@ services:
       AUTH_USERNAME: ${AUTH_USERNAME}
       AUTH_PASSWORD: ${AUTH_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN}
     # Sin depends_on: db — auth-service no usa la base de datos.
     ports:
       - "8009:8000"
+
+  gateway:
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
+    depends_on:
+      - create-startup-service
+      - read-startup-service
+      - update-startup-service
+      - delete-startup-service
+      - create-technology-service
+      - read-technology-service
+      - update-technology-service
+      - delete-technology-service
+      - auth-service
+    ports:
+      - "8080:80"
 
 volumes:
   db_data:
