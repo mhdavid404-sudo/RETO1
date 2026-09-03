@@ -1,0 +1,14 @@
+# RETO1 — docker-compose.yml
+#
+# Estado actual: prueba de humo (smoke test) para confirmar que Docker y
+# Docker Compose funcionan correctamente en esta máquina antes de construir
+# nada real. Este archivo se irá reemplazando por el compose completo
+# (gateway + 9 microservicios + postgres + frontend) en pasos posteriores.
+
+services:
+  # Contenedor de prueba: nginx sin configuración propia, solo para
+  # verificar que Compose puede levantar y bajar un servicio correctamente.
+  smoke-test:
+    image: nginx:alpine
+    ports:
+      - "8888:80"
