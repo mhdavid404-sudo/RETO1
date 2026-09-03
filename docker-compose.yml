@@ -1,14 +1,48 @@
 # RETO1 — docker-compose.yml
 #
-# Estado actual: prueba de humo (smoke test) para confirmar que Docker y
-# Docker Compose funcionan correctamente en esta máquina antes de construir
-# nada real. Este archivo se irá reemplazando por el compose completo
-# (gateway + 9 microservicios + postgres + frontend) en pasos posteriores.
+# Estado actual: solo lo necesario para levantar y validar el primer
+# microservicio (create-startup-service) contra Postgres real. Todavia
+# no incluye gateway, frontend, ni el resto de los microservicios — se
+# van agregando a medida que se construyen.
 
 services:
-  # Contenedor de prueba: nginx sin configuración propia, solo para
-  # verificar que Compose puede levantar y bajar un servicio correctamente.
-  smoke-test:
-    image: nginx:alpine
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      # Los scripts de db/init/ corren una sola vez, al crear el volumen
+      # por primera vez (comportamiento estandar de la imagen oficial).
+      - ./db/init:/docker-entrypoint-initdb.d
     ports:
-      - "8888:80"
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  create-startup-service:
+    build:
+      # Contexto = raiz del repo, para que el Dockerfile pueda copiar
+      # shared/ ademas del codigo propio del servicio.
+      context: .
+      dockerfile: services/startups/create/Dockerfile
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8001:8000"
+
+volumes:
+  db_data:
