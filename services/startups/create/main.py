@@ -12,12 +12,14 @@
 from fastapi import Depends, FastAPI, status
 
 from shared.auth import requerir_autenticacion
+from shared.cors import configurar_cors
 from shared.db import obtener_cursor
 from shared.errors import registrar_manejadores_de_errores
 
 from schemas import CrearStartupRequest, StartupResponse
 
 app = FastAPI(title="create-startup-service")
+configurar_cors(app)
 registrar_manejadores_de_errores(app)
 
 

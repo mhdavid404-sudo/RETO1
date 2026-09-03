@@ -11,12 +11,14 @@ from typing import Optional
 
 from fastapi import FastAPI, Query
 
+from shared.cors import configurar_cors
 from shared.db import obtener_cursor
 from shared.errors import NotFoundError, registrar_manejadores_de_errores
 
 from schemas import StartupResponse
 
 app = FastAPI(title="read-startup-service")
+configurar_cors(app)
 registrar_manejadores_de_errores(app)
 
 COLUMNAS = "id, name, founded_at, location, category, funding_amount, created_at, updated_at"

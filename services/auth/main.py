@@ -20,11 +20,13 @@ from fastapi import FastAPI
 
 from shared.auth import crear_token
 from shared.config import variable_obligatoria
+from shared.cors import configurar_cors
 from shared.errors import AuthError, registrar_manejadores_de_errores
 
 from schemas import LoginRequest, LoginResponse
 
 app = FastAPI(title="auth-service")
+configurar_cors(app)
 registrar_manejadores_de_errores(app)
 
 AUTH_USERNAME = variable_obligatoria("AUTH_USERNAME")

@@ -7,12 +7,14 @@
 from fastapi import Depends, FastAPI
 
 from shared.auth import requerir_autenticacion
+from shared.cors import configurar_cors
 from shared.db import obtener_cursor
 from shared.errors import NotFoundError, ValidationError, registrar_manejadores_de_errores
 
 from schemas import ActualizarTechnologyRequest, TechnologyResponse
 
 app = FastAPI(title="update-technology-service")
+configurar_cors(app)
 registrar_manejadores_de_errores(app)
 
 COLUMNAS = "id, name, sector, description, adoption_level, created_at, updated_at"

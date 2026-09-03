@@ -7,10 +7,12 @@
 from fastapi import Depends, FastAPI, status
 
 from shared.auth import requerir_autenticacion
+from shared.cors import configurar_cors
 from shared.db import obtener_cursor
 from shared.errors import NotFoundError, registrar_manejadores_de_errores
 
 app = FastAPI(title="delete-startup-service")
+configurar_cors(app)
 registrar_manejadores_de_errores(app)
 
 

@@ -121,3 +121,36 @@ efectivamente necesita una variable la declara ahí mismo, usando ese
 helper. Ningún servicio hereda una obligación de configuración por una
 variable que no usa — solo por los módulos de `shared/` que
 efectivamente importa.
+
+---
+
+## 2026-09-02 — Dónde se implementa CORS restringido al front
+
+**Contexto:** el documento oficial del reto exige CORS restringido al
+dominio del front. Esto no aparece textualmente en `RETO1-BRIEF.md`
+(que es un resumen, no el documento completo) — se registra aquí por
+instrucción explícita del Product Owner, que confirmó el requisito
+directamente. No especifica dónde implementarlo.
+
+**Decisión (confirmada con el Product Owner antes de construir el
+gateway):** CORS se implementa en cada uno de los 9 microservicios
+FastAPI, vía un helper compartido `shared/cors.py` (`configurar_cors(app)`,
+`CORSMiddleware` restringido a una única variable `FRONTEND_ORIGIN`
+obligatoria) — **no** en Nginx.
+
+**Motivo:** el brief (§3) dice explícitamente que el gateway "no
+valida, no transforma, no decide — solo enruta y hace strip de
+prefijo". Decidir qué orígenes se aceptan es una decisión de política
+de seguridad, no ruteo puro; ponerla en Nginx habría contradicho ese
+principio. La alternativa (CORS en Nginx con `add_header` y manejo de
+`OPTIONS`) habría concentrado la configuración en un solo lugar, pero
+a costa de darle al gateway una responsabilidad que el documento no le
+asigna.
+
+**Cómo se aplica:** los 9 servicios llaman a `configurar_cors(app)`
+justo después de crear su instancia de `FastAPI`, antes de
+`registrar_manejadores_de_errores(app)`. `FRONTEND_ORIGIN` se agregó a
+las anclas YAML de `docker-compose.yml` (`x-db-env`, `x-db-env-protegido`)
+y al bloque de `auth-service`, y a los 10 `.env.example` (raíz + 9
+servicios). El gateway (`gateway/nginx.conf`) no menciona CORS en
+absoluto.

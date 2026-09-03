@@ -7,12 +7,14 @@
 from fastapi import Depends, FastAPI
 
 from shared.auth import requerir_autenticacion
+from shared.cors import configurar_cors
 from shared.db import obtener_cursor
 from shared.errors import NotFoundError, ValidationError, registrar_manejadores_de_errores
 
 from schemas import ActualizarStartupRequest, StartupResponse
 
 app = FastAPI(title="update-startup-service")
+configurar_cors(app)
 registrar_manejadores_de_errores(app)
 
 COLUMNAS = "id, name, founded_at, location, category, funding_amount, created_at, updated_at"
