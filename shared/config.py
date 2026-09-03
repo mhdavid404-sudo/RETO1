@@ -10,11 +10,19 @@
 # importar el módulo, no al usarlas. Si falta una, el servicio no debe
 # arrancar "a medias" — mejor un fallo inmediato y explícito al iniciar
 # el contenedor que un error confuso más tarde en medio de una petición.
+#
+# Importante: solo las variables que TODOS los servicios necesitan (la
+# conexión a la DB) viven aquí. JWT_SECRET vive en shared/auth.py, no
+# aquí — si estuviera en este módulo, importar shared.config (algo que
+# hace shared/db.py, y por lo tanto todo servicio) obligaria incluso a
+# los servicios de solo lectura a tener JWT_SECRET configurado, aunque
+# nunca lo usen. variable_obligatoria() queda publica para que
+# shared/auth.py la reutilice con el mismo criterio de fallo rapido.
 
 import os
 
 
-def _variable_obligatoria(nombre: str) -> str:
+def variable_obligatoria(nombre: str) -> str:
     """Lee una variable de entorno obligatoria; falla rápido si no existe."""
     valor = os.getenv(nombre)
     if not valor:
@@ -32,15 +40,6 @@ def _variable_obligatoria(nombre: str) -> str:
 # son específicos de cada entorno y deben venir del .env.
 DB_HOST = os.getenv("DB_HOST", "db")
 DB_PORT = os.getenv("DB_PORT", "5432")
-DB_NAME = _variable_obligatoria("DB_NAME")
-DB_USER = _variable_obligatoria("DB_USER")
-DB_PASSWORD = _variable_obligatoria("DB_PASSWORD")
-
-# --- Autenticación JWT ---
-# El secreto de firma es compartido entre auth-service (que firma) y los
-# otros 8 servicios (que solo verifican). No puede tener un default: un
-# secreto por defecto conocido en el código fuente anularía la seguridad
-# del token.
-JWT_SECRET = _variable_obligatoria("JWT_SECRET")
-JWT_ALGORITHM = "HS256"
-JWT_EXPIRATION_MINUTES = 60
+DB_NAME = variable_obligatoria("DB_NAME")
+DB_USER = variable_obligatoria("DB_USER")
+DB_PASSWORD = variable_obligatoria("DB_PASSWORD")

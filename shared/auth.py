@@ -3,16 +3,26 @@
 # Creacion y verificacion de JWT. Solo auth-service llama a crear_token();
 # los otros 8 servicios solo llaman a verificar_token() para proteger sus
 # endpoints. Ninguno de los 9 servicios tiene logica propia de usuarios:
-# eso vive unicamente en auth-service (ver shared/config.py sobre el
-# secreto compartido).
+# eso vive unicamente en auth-service.
+#
+# JWT_SECRET vive aqui y no en shared/config.py a proposito: solo los
+# servicios que importan shared.auth (los que crean o verifican tokens)
+# deben exigir ese secreto al arrancar. Si viviera en config.py, los
+# servicios de solo lectura -que importan shared.db, y por lo tanto
+# shared.config- fallarian al arrancar por falta de una variable que
+# jamas usan.
 
 from datetime import datetime, timedelta, timezone
 
 import jwt
 from fastapi import Header
 
-from shared.config import JWT_SECRET, JWT_ALGORITHM, JWT_EXPIRATION_MINUTES
+from shared.config import variable_obligatoria
 from shared.errors import AuthError
+
+JWT_SECRET = variable_obligatoria("JWT_SECRET")
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRATION_MINUTES = 60
 
 
 def crear_token(datos: dict) -> str:
