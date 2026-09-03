@@ -232,6 +232,27 @@ Códigos: 201 creado · 200 éxito · 204 eliminado sin contenido · 400 validac
 
 ---
 
+## 6.1 Seguridad mínima
+
+> Sección agregada — venía en el documento oficial del reto ("Seguridad mínima")
+> pero se omitió por error al condensar este brief. Corregido tras detectarlo
+> Code al construir `gateway/`, verificado contra el documento original.
+
+- **CORS restringido al dominio del front** — decidido: `CORSMiddleware` en cada
+  uno de los 9 servicios vía `shared/cors.py`, con `FRONTEND_ORIGIN` como variable
+  de entorno obligatoria (mismo patrón que `JWT_SECRET`). No en Nginx — el gateway
+  "no valida, no transforma, no decide, solo enruta" (sección 3 de este brief).
+- **Validación y sanitización de inputs** — ya cubierto por los schemas Pydantic
+  de los 9 servicios (`extra="forbid"`, tipos estrictos, `exclude_unset` en updates).
+- **No exponer secretos** — todo secreto (DB, JWT, credenciales de auth) vive en
+  variables de entorno, nunca hardcodeado ni en el repo.
+- **Uso de `.env` y `.env.example`** — cada servicio trae su `.env.example`; el
+  `.env` real queda en `.gitignore`.
+- Autenticación no obligatoria (según el reto) — se implementó igual como plus,
+  ver sección 2 y "Auth (plus)" arriba.
+
+---
+
 ## 7. Nginx — reglas de ruteo
 
 Prefijo `/v1/api` obligatorio en todas las rutas. Timeout 30s, logging de acceso
