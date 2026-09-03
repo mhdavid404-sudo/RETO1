@@ -1,9 +1,28 @@
 # RETO1 — docker-compose.yml
 #
-# Estado actual: solo lo necesario para levantar y validar el primer
-# microservicio (create-startup-service) contra Postgres real. Todavia
-# no incluye gateway, frontend, ni el resto de los microservicios — se
-# van agregando a medida que se construyen.
+# Estado actual: db + los 4 microservicios de Startups (create/read/
+# update/delete), validados contra Postgres real. Gateway, frontend y
+# Technologies se agregan en pasos posteriores.
+#
+# Los bloques x-* son anclas YAML: agrupan las variables de entorno que
+# comparten varios servicios (conexion a DB, y DB + JWT_SECRET para los
+# protegidos) para no repetirlas 4/8 veces — mismo principio de "sin
+# logica duplicada" que shared/, aplicado al compose.
+
+x-db-env: &db-env
+  DB_HOST: db
+  DB_PORT: 5432
+  DB_NAME: ${DB_NAME}
+  DB_USER: ${DB_USER}
+  DB_PASSWORD: ${DB_PASSWORD}
+
+x-db-env-protegido: &db-env-protegido
+  DB_HOST: db
+  DB_PORT: 5432
+  DB_NAME: ${DB_NAME}
+  DB_USER: ${DB_USER}
+  DB_PASSWORD: ${DB_PASSWORD}
+  JWT_SECRET: ${JWT_SECRET}
 
 services:
   db:
@@ -27,22 +46,91 @@ services:
 
   create-startup-service:
     build:
-      # Contexto = raiz del repo, para que el Dockerfile pueda copiar
-      # shared/ ademas del codigo propio del servicio.
       context: .
       dockerfile: services/startups/create/Dockerfile
-    environment:
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_NAME: ${DB_NAME}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      JWT_SECRET: ${JWT_SECRET}
+    environment: *db-env-protegido
     depends_on:
       db:
         condition: service_healthy
     ports:
       - "8001:8000"
+
+  read-startup-service:
+    build:
+      context: .
+      dockerfile: services/startups/read/Dockerfile
+    environment: *db-env
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8002:8000"
+
+  update-startup-service:
+    build:
+      context: .
+      dockerfile: services/startups/update/Dockerfile
+    environment: *db-env-protegido
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8003:8000"
+
+  delete-startup-service:
+    build:
+      context: .
+      dockerfile: services/startups/delete/Dockerfile
+    environment: *db-env-protegido
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8004:8000"
+
+  create-technology-service:
+    build:
+      context: .
+      dockerfile: services/technologies/create/Dockerfile
+    environment: *db-env-protegido
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8005:8000"
+
+  read-technology-service:
+    build:
+      context: .
+      dockerfile: services/technologies/read/Dockerfile
+    environment: *db-env
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8006:8000"
+
+  update-technology-service:
+    build:
+      context: .
+      dockerfile: services/technologies/update/Dockerfile
+    environment: *db-env-protegido
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8007:8000"
+
+  delete-technology-service:
+    build:
+      context: .
+      dockerfile: services/technologies/delete/Dockerfile
+    environment: *db-env-protegido
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8008:8000"
 
 volumes:
   db_data:
