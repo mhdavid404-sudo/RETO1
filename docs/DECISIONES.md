@@ -65,12 +65,17 @@ servicios de solo lectura (que nunca verifican tokens y correctamente no
 tienen `JWT_SECRET` en su `.env`) fallaban al arrancar.
 
 **Corrección:** `JWT_SECRET` (y `JWT_ALGORITHM`/`JWT_EXPIRATION_MINUTES`)
-se movieron de `shared/config.py` a `shared/auth.py`. `config.py` ahora
-solo exige lo que **todo** servicio necesita (credenciales de DB);
-`auth.py` exige `JWT_SECRET` únicamente para los servicios que
-efectivamente lo importan (`create`/`update`/`delete`, ambas entidades).
+se movieron de `shared/config.py` a `shared/auth.py`. `auth.py` exige
+`JWT_SECRET` únicamente para los servicios que efectivamente lo
+importan (`create`/`update`/`delete`, ambas entidades).
 `variable_obligatoria()` se dejó pública en `config.py` para que
 `auth.py` reutilice el mismo criterio de fallo rápido sin duplicarlo.
+
+*(Nota: en su momento esto dejaba `config.py` con las variables de DB
+como "lo único verdaderamente universal". Al construir `auth-service`
+—que no toca la DB— se vio que ni eso era universal; ver la entrada del
+2026-09-02 "Bug: DB_* exigidas por auth-service" más abajo, que termina
+de vaciar `config.py`.)
 
 **Cómo se aplica:** cualquier variable de entorno nueva que solo un
 subconjunto de servicios necesite debe vivir en el módulo de `shared/`
@@ -90,3 +95,29 @@ insensible a mayúsculas (`ILIKE '%valor%'`), pensados como búsqueda. Los
 campos categóricos (`category` en startups; `sector` y `adoptionLevel`
 en technologies) usan coincidencia exacta, por representar valores de un
 conjunto cerrado.
+
+---
+
+## 2026-09-02 — Bug: DB_* exigidas por auth-service (que no usa la DB)
+
+**Qué pasó:** al diseñar `auth-service` —el único de los 9 servicios que
+no toca la base de datos, brief §3— se detectó el mismo problema de la
+entrada anterior mirado desde el otro lado: `shared/config.py` seguía
+definiendo `DB_NAME`/`DB_USER`/`DB_PASSWORD` como obligatorias. Como
+`shared/auth.py` importa `variable_obligatoria` desde `shared/config.py`,
+y Python ejecuta el módulo completo al importarlo, `auth-service`
+habría heredado la obligación de tener credenciales de DB configuradas
+sin usarlas jamás.
+
+**Corrección:** `shared/config.py` se vació a solo `variable_obligatoria()`
+— ninguna variable concreta vive ahí. Las variables `DB_HOST`/`DB_PORT`/
+`DB_NAME`/`DB_USER`/`DB_PASSWORD` se movieron a `shared/db.py`, el único
+módulo que las usa.
+
+**Cómo se aplica (regla ya estable para el resto del proyecto):**
+`shared/config.py` es solo el helper genérico de "leer variable
+obligatoria y fallar rápido". Cada módulo de `shared/` que
+efectivamente necesita una variable la declara ahí mismo, usando ese
+helper. Ningún servicio hereda una obligación de configuración por una
+variable que no usa — solo por los módulos de `shared/` que
+efectivamente importa.

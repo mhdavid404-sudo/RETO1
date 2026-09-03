@@ -7,14 +7,26 @@
 # configuracion y ciclo de vida (cuando inicializarlo, cuando cerrarlo,
 # tamaño) que no se justifica aqui. Si el trafico real lo exigiera, seria
 # el primer cambio a evaluar, pero no forma parte del alcance del reto.
+#
+# Las variables DB_* se definen aqui (no en shared/config.py): solo los
+# servicios que importan shared.db necesitan la DB configurada.
+# auth-service, por ejemplo, no toca la base de datos en absoluto y por
+# lo tanto no importa este modulo (ver docs/DECISIONES.md).
 
+import os
 from contextlib import contextmanager
 from typing import Iterator
 
 import psycopg2
 import psycopg2.extras
 
-from shared.config import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
+from shared.config import variable_obligatoria
+
+DB_HOST = os.getenv("DB_HOST", "db")
+DB_PORT = os.getenv("DB_PORT", "5432")
+DB_NAME = variable_obligatoria("DB_NAME")
+DB_USER = variable_obligatoria("DB_USER")
+DB_PASSWORD = variable_obligatoria("DB_PASSWORD")
 
 
 @contextmanager
