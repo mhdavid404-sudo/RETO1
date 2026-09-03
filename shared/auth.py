@@ -9,6 +9,7 @@
 from datetime import datetime, timedelta, timezone
 
 import jwt
+from fastapi import Header
 
 from shared.config import JWT_SECRET, JWT_ALGORITHM, JWT_EXPIRATION_MINUTES
 from shared.errors import AuthError
@@ -37,3 +38,20 @@ def verificar_token(token: str) -> dict:
         raise AuthError("El token expiro")
     except jwt.InvalidTokenError:
         raise AuthError("Token invalido")
+
+
+def requerir_autenticacion(authorization: str | None = Header(default=None)) -> dict:
+    """
+    Dependencia de FastAPI para proteger endpoints de escritura
+    (create/update/delete — ver docs/DECISIONES.md sobre el alcance).
+    Uso: `def crear_x(..., usuario: dict = Depends(requerir_autenticacion))`.
+
+    Lee el header "Authorization: Bearer <token>", verifica el token y
+    devuelve su payload. Si el header falta o el token es invalido,
+    lanza AuthError (401) — manejado de forma uniforme por
+    shared/errors.py, igual que cualquier otro error de la aplicacion.
+    """
+    if not authorization or not authorization.startswith("Bearer "):
+        raise AuthError("Falta el header Authorization: Bearer <token>")
+    token = authorization.removeprefix("Bearer ").strip()
+    return verificar_token(token)
