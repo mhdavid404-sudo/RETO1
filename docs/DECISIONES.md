@@ -208,3 +208,69 @@ para llamar `configurar_cors(app)`, así que ningún servicio hereda una
 obligación nueva). Detectado probando manualmente en navegador, no con
 `curl` ni con los 28 casos scriptados — ninguno de esos forzaba un 500
 real con verificación de CORS.
+
+---
+
+## 2026-09-04 — Cómo containerizar el frontend en el compose local
+
+**Contexto:** el documento oficial del reto permite dos formas de
+servir el frontend: "detrás de Nginx" o "como hosting estático". No
+especifica cuál usar para el `docker-compose.yml` local — se propuso y
+confirmó antes de construir.
+
+**Decisión:** Dockerfile multi-stage — build de Vite en una etapa Node,
+resultado servido por Nginx en la etapa final. Mismo patrón que
+`gateway/Dockerfile` (`nginx:alpine`), consistente con el resto del
+proyecto.
+
+**Motivo:** todo el sistema queda reproducible con un solo
+`docker-compose up --build`, sin depender de nada externo. Reutiliza
+una imagen base (`nginx:alpine`) y un patrón que el proyecto ya usa
+para el gateway, en vez de introducir una herramienta nueva (ej. un
+servidor Node tipo `serve`) solo para este contenedor.
+
+**Detalle técnico importante:** `VITE_API_BASE_URL` es una variable de
+**build time** de Vite (se hornea en el bundle de JS al compilar, no
+se lee en runtime dentro del contenedor) — el Dockerfile la recibe
+como build arg, no como variable de entorno del contenedor en
+ejecución. Distinto de como funcionan las variables de los 9
+microservicios (esas sí son de runtime).
+
+**Segundo detalle, encontrado al conectar el frontend al compose:**
+`FRONTEND_ORIGIN` (CORS) acepta un único origen, no una lista — y el
+frontend ahora corre en dos puertos distintos según el escenario:
+`npm run dev` (servidor de Vite, hot reload) en `:5173`, o el
+contenedor Nginx del compose completo en `:3000`. Un solo valor de
+`FRONTEND_ORIGIN` sirve para uno de los dos a la vez. Se cambió el
+default del `.env.example` raíz a `http://localhost:3000` (el
+escenario "todo con un comando" que este `docker-compose.yml` existe
+para resolver), documentando en el propio archivo que hay que
+cambiarlo a `:5173` si se está iterando con `npm run dev`.
+
+---
+
+## 2026-09-04 — Opción de despliegue real: B (Vercel + Render/Railway)
+
+**Contexto:** el documento oficial del reto ofrece dos opciones de
+despliegue — Opción A (backend+gateway en Render/Railway, DB
+administrada) u Opción B (frontend en Vercel, backend+gateway en
+Render/Railway). Tampoco aparece en `RETO1-BRIEF.md` — información
+directa del documento oficial, confirmada por el Product Owner.
+
+**Decisión (confirmada con el Product Owner):** Opción B — frontend en
+Vercel, backend+gateway en Render/Railway.
+
+**Motivo (corregido por el Product Owner — la razón real, no la que
+propuse primero):** Vercel detecta y despliega un proyecto Vite+React
+sin configuración manual. Esa es la razón — no un argumento de
+"separación arquitectónica", que ya la da el código (el frontend solo
+habla con el gateway, brief sección 8) y no depende de en qué
+plataforma quede hospedado cada pieza.
+
+**Cómo se aplica:** el deploy real (crear cuentas, conectar
+repositorios, hacer clic en "deploy") lo hace el Product Owner, no
+Claude Code — el trabajo de construcción es dejar Dockerfiles,
+configuración y variables de entorno listos para que ese paso sea
+simple. Detalle de despliegue (comandos exactos, variables por
+plataforma) se documenta más adelante, en la sección "Cómo desplegar"
+del README — todavía no construida.
