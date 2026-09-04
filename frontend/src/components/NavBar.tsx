@@ -1,6 +1,10 @@
 // src/components/NavBar.tsx
-import { Link } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
+
+function claseEnlace({ isActive }: { isActive: boolean }): string {
+  return isActive ? 'activo' : '';
+}
 
 export function NavBar() {
   const { isAuthenticated, logout } = useAuth();
@@ -8,13 +12,20 @@ export function NavBar() {
   return (
     <nav className="barra-navegacion">
       <span className="marca">RETO1</span>
-      <Link to="/startups">Startups</Link>
+      <NavLink to="/startups" className={claseEnlace}>
+        Startups
+      </NavLink>
+      <NavLink to="/technologies" className={claseEnlace}>
+        Technologies
+      </NavLink>
       {isAuthenticated ? (
         <button type="button" onClick={logout}>
           Cerrar sesión
         </button>
       ) : (
-        <Link to="/login">Iniciar sesión</Link>
+        <NavLink to="/login" className={claseEnlace}>
+          Iniciar sesión
+        </NavLink>
       )}
     </nav>
   );

@@ -51,7 +51,7 @@ export function StartupForm({ startup, onGuardar, onCancelar }: Props) {
   }
 
   return (
-    <form onSubmit={manejarEnvio} className="formulario-startup">
+    <form onSubmit={manejarEnvio} className="formulario">
       <h2>{startup ? 'Editar startup' : 'Nueva startup'}</h2>
       <label>
         Nombre
