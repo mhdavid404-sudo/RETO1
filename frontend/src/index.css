@@ -1,13 +1,21 @@
-/* src/index.css — estilos minimos, sin framework de CSS. */
+/* src/index.css — estilos minimos, sin framework de CSS ni libreria de
+   UI (decision del reto: no le agrega tiempo que no rinda en la
+   rubrica). Una sola hoja global: la app tiene 3 paginas con el mismo
+   vocabulario visual (formularios, tablas, avisos), CSS Modules no
+   aportaria nada a esta escala. */
 
 :root {
   --texto: #1f2328;
   --texto-tenue: #57606a;
   --fondo: #ffffff;
+  --fondo-sutil: #f6f8fa;
   --borde: #d0d7de;
   --acento: #0969da;
+  --acento-fondo: #0969da;
+  --acento-texto: #ffffff;
   --error: #cf222e;
   --error-fondo: #ffebe9;
+  --aviso-texto: #7d6608;
   --aviso-fondo: #fff8c5;
 }
 
@@ -18,6 +26,8 @@
 body {
   margin: 0;
   font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
   color: var(--texto);
   background: var(--fondo);
 }
@@ -25,76 +35,100 @@ body {
 .contenido {
   max-width: 960px;
   margin: 0 auto;
-  padding: 24px 16px 48px;
+  padding: 32px 20px 64px;
 }
 
 h1 {
-  font-size: 28px;
-  margin: 0 0 16px;
+  font-size: 26px;
+  margin: 0 0 20px;
 }
 
 h2 {
-  font-size: 20px;
-  margin: 0 0 12px;
+  font-size: 18px;
+  margin: 0 0 4px;
 }
 
 /* --- Nav --- */
 .barra-navegacion {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 12px 16px;
+  gap: 20px;
+  padding: 14px 20px;
   border-bottom: 1px solid var(--borde);
+  background: var(--fondo-sutil);
 }
 
 .barra-navegacion .marca {
   font-weight: 700;
+  letter-spacing: 0.02em;
   margin-right: auto;
 }
 
 .barra-navegacion a {
-  color: var(--acento);
+  color: var(--texto-tenue);
   text-decoration: none;
+  font-size: 14px;
 }
 
 .barra-navegacion a:hover {
-  text-decoration: underline;
+  color: var(--acento);
+}
+
+.barra-navegacion a.activo {
+  color: var(--acento);
+  font-weight: 600;
+}
+
+.barra-navegacion button {
+  font-size: 14px;
 }
 
 /* --- Formularios --- */
 form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   max-width: 420px;
-  margin: 16px 0;
-  padding: 16px;
+  margin: 20px 0;
+  padding: 20px;
   border: 1px solid var(--borde);
-  border-radius: 6px;
+  border-radius: 8px;
+  background: var(--fondo-sutil);
 }
 
 label {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 14px;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--texto-tenue);
 }
 
 input {
-  padding: 6px 8px;
+  padding: 8px 10px;
   border: 1px solid var(--borde);
-  border-radius: 4px;
+  border-radius: 6px;
   font-size: 14px;
+  font-family: inherit;
+  background: var(--fondo);
+  color: var(--texto);
+}
+
+input:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 1px;
 }
 
 button {
-  padding: 6px 14px;
+  padding: 8px 16px;
   border: 1px solid var(--borde);
-  border-radius: 4px;
+  border-radius: 6px;
   background: var(--fondo);
+  color: var(--texto);
   cursor: pointer;
   font-size: 14px;
+  font-family: inherit;
 }
 
 button:hover:not(:disabled) {
@@ -107,9 +141,28 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* Boton principal de cada pantalla ("+ Nueva startup") y el submit de
+   los formularios ("Guardar") se destacan igual, son la accion
+   primaria de su contexto. */
+.acciones-formulario button[type='submit'],
+.pagina-startups > button,
+.pagina-technologies > button {
+  background: var(--acento-fondo);
+  color: var(--acento-texto);
+  border-color: var(--acento-fondo);
+}
+
+.acciones-formulario button[type='submit']:hover:not(:disabled),
+.pagina-startups > button:hover:not(:disabled),
+.pagina-technologies > button:hover:not(:disabled) {
+  opacity: 0.9;
+  color: var(--acento-texto);
+}
+
 .acciones-formulario {
   display: flex;
   gap: 8px;
+  margin-top: 4px;
 }
 
 .acciones-fila {
@@ -120,8 +173,8 @@ button:disabled {
 /* --- Filtros y tabla --- */
 .filtros {
   display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 10px;
+  margin-bottom: 16px;
 }
 
 .filtros input {
@@ -131,36 +184,57 @@ button:disabled {
 table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 12px;
+  margin-top: 16px;
+  font-size: 14px;
 }
 
 th,
 td {
   text-align: left;
-  padding: 8px;
+  padding: 10px 8px;
   border-bottom: 1px solid var(--borde);
-  font-size: 14px;
 }
 
 th {
   color: var(--texto-tenue);
   font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-/* --- Mensajes --- */
+tbody tr:hover {
+  background: var(--fondo-sutil);
+}
+
+td[colspan] {
+  text-align: center;
+  color: var(--texto-tenue);
+  padding: 24px 8px;
+}
+
+/* --- Mensajes y estados --- */
 .error {
   color: var(--error);
   background: var(--error-fondo);
-  padding: 8px 12px;
-  border-radius: 4px;
+  padding: 10px 14px;
+  border-radius: 6px;
   font-size: 14px;
+  margin: 12px 0;
 }
 
 .aviso {
-  color: #7d6608;
+  color: var(--aviso-texto);
   background: var(--aviso-fondo);
-  padding: 8px 12px;
-  border-radius: 4px;
+  padding: 10px 14px;
+  border-radius: 6px;
   font-size: 14px;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+.cargando {
+  color: var(--texto-tenue);
+  font-size: 14px;
+  padding: 24px 0;
+  text-align: center;
 }

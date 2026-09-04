@@ -139,7 +139,7 @@ export function StartupsPage() {
       {error && <p className="error">{error}</p>}
 
       {cargando ? (
-        <p>Cargando…</p>
+        <p className="cargando">Cargando…</p>
       ) : (
         <table>
           <thead>
