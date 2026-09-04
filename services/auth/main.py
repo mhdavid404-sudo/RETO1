@@ -42,9 +42,17 @@ def salud() -> dict:
 def login(datos: LoginRequest) -> LoginResponse:
     # secrets.compare_digest en vez de == : comparacion de tiempo
     # constante, evita que la duracion de la respuesta filtre
-    # informacion sobre cuantos caracteres coinciden.
-    usuario_correcto = secrets.compare_digest(datos.username, AUTH_USERNAME)
-    password_correcta = secrets.compare_digest(datos.password, AUTH_PASSWORD)
+    # informacion sobre cuantos caracteres coinciden. Requiere bytes
+    # (o str puro ASCII) — se codifica a UTF-8 primero porque
+    # username/password pueden traer acentos u otros caracteres no
+    # ASCII (ej. una contrasena con "ñ"), y compare_digest lanza
+    # TypeError con str no-ASCII.
+    usuario_correcto = secrets.compare_digest(
+        datos.username.encode("utf-8"), AUTH_USERNAME.encode("utf-8")
+    )
+    password_correcta = secrets.compare_digest(
+        datos.password.encode("utf-8"), AUTH_PASSWORD.encode("utf-8")
+    )
 
     if not (usuario_correcto and password_correcta):
         # Mensaje generico unico para ambos casos (usuario inexistente

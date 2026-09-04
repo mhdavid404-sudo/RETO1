@@ -154,3 +154,57 @@ las anclas YAML de `docker-compose.yml` (`x-db-env`, `x-db-env-protegido`)
 y al bloque de `auth-service`, y a los 10 `.env.example` (raíz + 9
 servicios). El gateway (`gateway/nginx.conf`) no menciona CORS en
 absoluto.
+
+---
+
+## 2026-09-03 — Bug: `secrets.compare_digest` con contraseñas no-ASCII
+
+**Qué pasó:** probando el login del front-end en un navegador real
+(no `curl`) con una contraseña que incluía una "ñ", `auth-service`
+devolvió 500. El traceback: `TypeError: comparing strings with
+non-ASCII characters is not supported` — `secrets.compare_digest`
+exige `bytes`, o `str` compuesto solo por ASCII.
+
+**Corrección:** ambos operandos se codifican a UTF-8
+(`datos.username.encode("utf-8")`, etc.) antes de comparar. Sigue
+siendo comparación de tiempo constante, ahora sobre bytes.
+
+**Cómo se aplica:** `services/auth/main.py`. Cualquier futuro uso de
+`compare_digest` en el proyecto debe codificar a bytes primero.
+
+---
+
+## 2026-09-03 — Bug: los errores 500 no llevaban headers CORS
+
+**Qué pasó:** el 500 de arriba, visto desde el navegador, no se
+mostró como "error 500" sino como un bloqueo de CORS puro
+("blocked by CORS policy: No 'Access-Control-Allow-Origin' header is
+present") — `fetch()` nunca llegó a exponerle a React el status code
+real.
+
+**Causa raíz:** Starlette trata especial a los handlers registrados
+para la clase base `Exception` (como `_manejar_error_no_controlado`
+en `shared/errors.py`): en vez de pasar por `ExceptionMiddleware`
+(que queda DENTRO de `CORSMiddleware` en el stack), los enruta a
+`ServerErrorMiddleware`, que es la capa más externa de toda la
+aplicación — por fuera de cualquier middleware agregado con
+`add_middleware`, `CORSMiddleware` incluido. Consecuencia: cualquier
+excepción no anticipada en cualquiera de los 9 servicios responde
+sin headers CORS, y el navegador la reporta como fallo de CORS en vez
+de como el error 500 real que es. Los otros tres handlers
+(`ErrorAplicacion`, `RequestValidationError` — 400/401/404) no tienen
+este problema: Starlette sí los enruta por `ExceptionMiddleware`,
+dentro de `CORSMiddleware`.
+
+**Corrección:** `_manejar_error_no_controlado` agrega manualmente
+`Access-Control-Allow-Origin`/`Access-Control-Allow-Credentials` a su
+propia respuesta cuando el header `Origin` de la petición coincide con
+`FRONTEND_ORIGIN` — replicando a mano, solo para este caso, lo que
+`CORSMiddleware` no alcanza a hacer.
+
+**Cómo se aplica:** `shared/errors.py` importa `FRONTEND_ORIGIN` de
+`shared/cors.py` (seguro: los 9 servicios ya importan `shared.cors`
+para llamar `configurar_cors(app)`, así que ningún servicio hereda una
+obligación nueva). Detectado probando manualmente en navegador, no con
+`curl` ni con los 28 casos scriptados — ninguno de esos forzaba un 500
+real con verificación de CORS.

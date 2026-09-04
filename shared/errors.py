@@ -12,6 +12,8 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from shared.cors import FRONTEND_ORIGIN
+
 
 class ErrorAplicacion(Exception):
     """Base de todos los errores de negocio manejados por estos servicios."""
@@ -73,4 +75,19 @@ def registrar_manejadores_de_errores(app: FastAPI) -> None:
         # Ultima red de seguridad: cualquier excepcion no anticipada se
         # responde con el mismo formato en vez de filtrar un traceback
         # o el error generico por defecto de FastAPI/Starlette.
-        return _respuesta_error(500, "Internal server error", [str(exc)])
+        #
+        # CORS manual aqui (bug real encontrado probando el front en
+        # navegador, ver docs/DECISIONES.md): Starlette enruta los
+        # handlers registrados para la clase base `Exception` a
+        # ServerErrorMiddleware, que queda POR FUERA de CORSMiddleware
+        # en el stack — CORSMiddleware nunca ve esta respuesta, asi que
+        # nunca le agrega el header Access-Control-Allow-Origin. Los
+        # otros handlers (ErrorAplicacion, RequestValidationError) no
+        # tienen este problema porque Starlette los enruta por
+        # ExceptionMiddleware, que si esta dentro de CORSMiddleware.
+        respuesta = _respuesta_error(500, "Internal server error", [str(exc)])
+        origen = request.headers.get("origin")
+        if origen == FRONTEND_ORIGIN:
+            respuesta.headers["Access-Control-Allow-Origin"] = FRONTEND_ORIGIN
+            respuesta.headers["Access-Control-Allow-Credentials"] = "true"
+        return respuesta
