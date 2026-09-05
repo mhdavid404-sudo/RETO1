@@ -348,3 +348,34 @@ es su hostname en la red privada — la decisión de nombrarlos igual no
 es solo por reconocibilidad en el dashboard (lo que pidió el Product
 Owner), también evita tener que mantener dos esquemas de nombres
 distintos para el mismo sistema.
+
+---
+
+## 2026-09-04 — Incidente real: los 9 nombres "limpios" ya estaban tomados
+
+**Qué pasó:** el riesgo que ya se había documentado como "aceptado, de
+baja probabilidad" (ver la decisión de `render.yaml` de más arriba) se
+materializó de verdad: los 9 nombres simples (`create-startup-service`,
+etc.) ya estaban tomados por otros usuarios de Render, así que Render
+le agregó un sufijo a cada uno de los 9 servicios al crearlos (ej.
+`read-technology-service-ztgl`, no `read-technology-service`).
+`gateway/nginx.render.conf` seguía escrito con los nombres sin sufijo.
+
+**Síntoma:** el gateway no fallaba con un 404 "servicio no existe" —
+resolvía `read-technology-service.onrender.com` contra el servicio de
+**otro dueño** que por casualidad eligió el mismo nombre base, y ese
+servicio estaba suspendido. El error visible (502/503) no apuntaba a
+la causa real (nombre equivocado) sin revisar el dashboard de Render.
+
+**Corrección:** se pegaron las 9 URLs reales (confirmadas por el
+Product Owner desde el dashboard) en los 9 `location` de
+`gateway/nginx.render.conf`. Verificado con `curl` contra cada una de
+las 9 URLs corregidas en `/health` — las 9 responden
+`{"status":"ok"}`, confirmando que apuntan a nuestros propios
+servicios y no a los de otro usuario.
+
+**Cómo se aplica:** si cualquiera de estos 9 servicios se recrea en
+Render (borrado y vuelto a crear, blueprint reaplicado desde cero,
+etc.), hay que volver a verificar su URL real en el dashboard antes de
+asumir que el nombre limpio sigue libre — no es algo que se resuelva
+una sola vez y quede fijo para siempre.
