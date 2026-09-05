@@ -420,3 +420,51 @@ confirmado sin cambios, no solo argumentado.
 (código, empaquetado en cada imagen) como su propia variable de
 entorno en `render.yaml`. `auth-service` y `gateway` no cambiaron, no
 hace falta tocarlos.
+
+---
+
+## 2026-09-04 — Migración de psycopg2 a psycopg (v3): causa raíz real
+
+**Qué pasó:** `DB_SSLMODE: require` (decisión anterior) no resolvió el
+problema — la conexión seguía cortándose durante la negociación TLS
+contra la DB externa de Render (`SSL connection has been closed
+unexpectedly`). El Product Owner aisló la causa raíz **fuera** del
+código del proyecto: probó la misma base de datos y las mismas
+credenciales cambiando únicamente la librería cliente — `psycopg2`
+falla la negociación TLS contra Postgres de Render, `psycopg` (v3) sí
+conecta. No fue un error de configuración (`sslmode`, credenciales,
+red) sino de la librería misma.
+
+**Corrección — migración de `psycopg2-binary` a `psycopg[binary]` v3
+en los 8 servicios que tocan la DB** (no `auth-service`):
+
+- Los 8 `requirements.txt`: `psycopg2-binary==2.9.10` →
+  `psycopg[binary]==3.3.5`.
+- `shared/db.py`: `import psycopg2` / `psycopg2.extras` →
+  `import psycopg` / `from psycopg.rows import dict_row`.
+  `psycopg.connect(...)` acepta los mismos parámetros que psycopg2
+  (`host`, `port`, `dbname`, `user`, `password`, `sslmode`) — se
+  agregó `row_factory=dict_row` al `connect()` para que
+  `cursor.fetchone()`/`fetchall()` sigan devolviendo cada fila como
+  `dict`, igual que con `RealDictCursor` antes. El resto de
+  `obtener_cursor()` (commit/rollback/close) no cambió — los nombres
+  de esos métodos son iguales entre psycopg2 y psycopg v3.
+- Ningún `main.py` ni `schemas.py` cambió: psycopg v3 soporta el mismo
+  estilo de placeholders `%(nombre)s` que ya usan las consultas SQL de
+  los 8 servicios, y ninguno importaba `psycopg2` directamente (se
+  verificó con grep antes de dar la migración por completa).
+
+**Verificado antes de subir nada** (no solo argumentado): sistema
+completo reconstruido con `docker-compose up --build` contra Postgres
+**local** (no Render) — mismo set de pruebas de siempre a través del
+gateway (login, CRUD completo de ambas entidades, filtros, validación,
+404, trigger `updated_at`) — todos los casos devuelven exactamente lo
+mismo que antes de la migración.
+
+**Cómo se aplica:** cuando una librería de infraestructura (driver de
+DB, cliente HTTP, etc.) falla contra un proveedor externo específico
+sin una causa de configuración clara, vale la pena aislar la variable
+"librería" antes de seguir ajustando parámetros de conexión — el
+Product Owner lo hizo probando la misma DB/credenciales con
+`psycopg` v3 directamente, fuera de este proyecto, antes de pedir el
+cambio aquí.

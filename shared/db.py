@@ -17,8 +17,8 @@ import os
 from contextlib import contextmanager
 from typing import Iterator
 
-import psycopg2
-import psycopg2.extras
+import psycopg
+from psycopg.rows import dict_row
 
 from shared.config import variable_obligatoria
 
@@ -28,21 +28,19 @@ DB_NAME = variable_obligatoria("DB_NAME")
 DB_USER = variable_obligatoria("DB_USER")
 DB_PASSWORD = variable_obligatoria("DB_PASSWORD")
 
-# Opcional, con default "prefer" (el mismo default de psycopg2/libpq):
+# Opcional, con default "prefer" (el mismo default de libpq):
 # docker-compose.yml no la define, asi que el comportamiento local no
 # cambia en nada. Solo hace falta en produccion contra una DB externa
-# de Render, donde "prefer" no siempre negocia bien la conexion TLS y
-# corta con "SSL connection has been closed unexpectedly" — Render
-# exige TLS explicito en conexiones externas (docs/DECISIONES.md).
+# de Render (docs/DECISIONES.md).
 DB_SSLMODE = os.getenv("DB_SSLMODE", "prefer")
 
 
 @contextmanager
-def obtener_cursor(commit: bool = False) -> Iterator["psycopg2.extras.RealDictCursor"]:
+def obtener_cursor(commit: bool = False) -> Iterator["psycopg.Cursor"]:
     """
     Abre una conexion, entrega un cursor que devuelve cada fila como dict
-    (RealDictCursor), y garantiza que la conexion se cierre siempre al
-    salir del bloque `with`, haya o no error.
+    (row_factory=dict_row), y garantiza que la conexion se cierre siempre
+    al salir del bloque `with`, haya o no error.
 
     commit=True: confirma la transaccion al salir sin errores (usar en
     create/update/delete). commit=False (default): solo lectura, no hace
@@ -51,16 +49,17 @@ def obtener_cursor(commit: bool = False) -> Iterator["psycopg2.extras.RealDictCu
     Si ocurre una excepcion dentro del bloque, se hace rollback antes de
     relanzarla — nunca se deja una transaccion a medias.
     """
-    conexion = psycopg2.connect(
+    conexion = psycopg.connect(
         host=DB_HOST,
         port=DB_PORT,
         dbname=DB_NAME,
         user=DB_USER,
         password=DB_PASSWORD,
         sslmode=DB_SSLMODE,
+        row_factory=dict_row,
     )
     try:
-        cursor = conexion.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cursor = conexion.cursor()
         yield cursor
         if commit:
             conexion.commit()
