@@ -274,3 +274,77 @@ configuración y variables de entorno listos para que ese paso sea
 simple. Detalle de despliegue (comandos exactos, variables por
 plataforma) se documenta más adelante, en la sección "Cómo desplegar"
 del README — todavía no construida.
+
+---
+
+## 2026-09-04 — render.yaml: tipo de servicio, secretos, nombres
+
+**Contexto:** antes de escribir `render.yaml` se verificó contra la
+documentación oficial de Render (no se asumió nada de memoria, dado
+que esto lo va a usar el Product Owner para desplegar de verdad).
+
+**Decisión 1 — los 10 servicios son `type: web`, no `pserv`:**
+Render no ofrece "private services" en el plan gratuito (confirmado:
+solo Web Services, Static Sites, Postgres y Key Value tienen instancia
+gratis). Pagar un plan de pago por 9 `pserv` solo para mantenerlos sin
+URL pública no se justificaba para un proyecto de evaluación —
+decisión revertida sobre la marcha después de proponer `pserv`
+inicialmente y encontrar el costo real.
+
+**Consecuencia encontrada después de decidir lo anterior:** un `web`
+service **gratuito** de Render puede *enviar* tráfico por la red
+privada, pero **no puede recibirlo** (confirmado en la documentación:
+"Free web services can send private network requests, but they can't
+receive them"). Esto significa que el gateway **no puede** alcanzar a
+los 9 microservicios por su hostname interno — al contrario de
+`docker-compose.yml`, donde sí funciona porque ahí todos los
+contenedores están en la misma red Docker sin esa restricción.
+
+**Corrección:** se creó `gateway/Dockerfile.render` +
+`gateway/nginx.render.conf`, específicos para Render — cada `location`
+apunta a la URL pública real del microservicio
+(`https://<nombre-del-servicio>.onrender.com`) en vez del hostname
+interno (`create-startup-service:8000`). `docker-compose.yml` y
+`gateway/nginx.conf` (desarrollo local) **no cambiaron**.
+`proxy_ssl_server_name on;` agregado porque ahora se habla HTTPS con
+SNI a un host compartido, cosa que no aplicaba al proxy HTTP interno
+original.
+
+**Riesgo aceptado (documentado, no resuelto con infraestructura
+extra):** los nombres de servicio en Render son globales — si
+"create-startup-service" (por ejemplo) ya estuviera tomado por otro
+usuario de Render, esa URL específica cambiaría con un sufijo, y esa
+línea de `nginx.render.conf` habría que corregirla a mano tras el
+primer deploy. Se evaluó una alternativa más robusta (templating con
+`envsubst` + variables de entorno en el gateway) y se descartó por
+agregar piezas móviles a un problema de baja probabilidad — decisión
+del Product Owner, explícita, no un atajo tomado en silencio.
+
+**Decisión 2 — secretos con `sync: false`:** `JWT_SECRET`,
+`DB_PASSWORD` y `AUTH_PASSWORD` (los tres que pidió el Product Owner)
+más, por consistencia, `DB_HOST`/`DB_PORT`/`DB_NAME`/`DB_USER` (no
+pedidos explícitamente, pero son igual de "credenciales de conexión" —
+mejor no dejar ninguno de los 5 valores de la DB escrito en el
+archivo). Render pide estos valores una sola vez desde el dashboard al
+crear el Blueprint y nunca los escribe en `render.yaml`. `AUTH_USERNAME`
+queda en texto plano (no pedido, y no es tan sensible como una
+contraseña).
+
+**Por qué no se usó `envVarGroups`** (el mecanismo nativo de Render
+para compartir variables entre servicios, evitaría repetir la lista
+7-8 veces): confirmado en la documentación que **Render ignora en
+silencio cualquier `sync: false` dentro de un grupo** — y casi todo lo
+que estos servicios comparten es `sync: false`. Usarlo habría
+significado que los secretos quedaran sin ocultar sin ningún error
+visible. Se repite la lista de variables en cada servicio en su lugar
+— es el patrón que la propia documentación de Render muestra cuando
+hay secretos de por medio.
+
+**Decisión 3 — nombres de servicio:** idénticos a los de
+`docker-compose.yml` (y por lo tanto a los upstreams ya escritos en
+`gateway/nginx.conf` para desarrollo local). Confirmado en la
+documentación de Render que el `name` de un servicio en el blueprint
+es su hostname en la red privada — la decisión de nombrarlos igual no
+es solo por reconocibilidad en el dashboard (lo que pidió el Product
+Owner), también evita tener que mantener dos esquemas de nombres
+distintos para el mismo sistema.

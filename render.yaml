@@ -1,0 +1,255 @@
+# render.yaml — Blueprint de Render para los 9 servicios de aplicacion
+# + el gateway (10 en total). La base de datos NO esta aqui: ya existe,
+# creada manualmente en Render — sus 5 valores de conexion (Hostname
+# interno, Port, Database, Username, Password, desde la pestana
+# "Connect"/"Info" de la DB) se pegan a mano en cada servicio via
+# sync: false, nunca quedan escritos en este archivo.
+#
+# Decisiones tomadas antes de escribir este archivo (docs/DECISIONES.md
+# tiene el detalle completo de cada una, verificado contra la
+# documentacion oficial de Render antes de construir):
+#
+# - Los 10 servicios son "web" (no "pserv"/private service): Render no
+#   ofrece private services en el plan gratuito, y pagar por 9 pserv
+#   solo para este proyecto de evaluacion no se justificaba.
+# - Consecuencia: un "web" service GRATIS de Render puede ENVIAR
+#   trafico por la red privada, pero no puede RECIBIRLO. El gateway no
+#   puede alcanzar a los 9 microservicios por hostname interno (como
+#   hace docker-compose.yml localmente) — por eso usa
+#   gateway/Dockerfile.render + gateway/nginx.render.conf, que le
+#   hablan a cada microservicio por su URL publica
+#   (https://<nombre>.onrender.com). docker-compose.yml y
+#   gateway/nginx.conf para desarrollo local no cambiaron.
+# - JWT_SECRET, DB_PASSWORD y AUTH_PASSWORD van con sync: false: Render
+#   los pide una sola vez desde el dashboard al crear el Blueprint y
+#   nunca los escribe aqui. Por consistencia, los otros 4 valores de
+#   conexion a la DB (DB_HOST, DB_PORT, DB_NAME, DB_USER) tambien van
+#   sync: false, aunque solo se pidio ocultar los tres primeros.
+#   AUTH_USERNAME queda en texto plano (no es tan sensible como una
+#   contrasena) — cambiar el valor de abajo o editarlo desde el
+#   dashboard antes de desplegar si hace falta.
+# - No se usa envVarGroups (el mecanismo nativo de Render para
+#   compartir variables entre servicios): Render ignora en silencio
+#   cualquier sync: false dentro de un grupo, y casi todo lo que
+#   comparten estos servicios es sync: false. Se repite la lista de
+#   variables en cada servicio — es el patron que la propia
+#   documentacion de Render muestra cuando hay secretos de por medio.
+# - Nombres de servicio identicos a los de docker-compose.yml y a los
+#   upstreams de gateway/nginx.conf (desarrollo local).
+#
+# FRONTEND_ORIGIN: reemplazar "https://TU-APP.vercel.app" en cada
+# servicio de abajo con la URL real del frontend una vez desplegado en
+# Vercel (brief: Opcion B — ver docs/DECISIONES.md).
+
+services:
+  # ---------- Startups ----------
+  - name: create-startup-service
+    type: web
+    runtime: docker
+    dockerfilePath: services/startups/create/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: FRONTEND_ORIGIN
+        value: https://TU-APP.vercel.app
+
+  - name: read-startup-service
+    type: web
+    runtime: docker
+    dockerfilePath: services/startups/read/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: FRONTEND_ORIGIN
+        value: https://TU-APP.vercel.app
+
+  - name: update-startup-service
+    type: web
+    runtime: docker
+    dockerfilePath: services/startups/update/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: FRONTEND_ORIGIN
+        value: https://TU-APP.vercel.app
+
+  - name: delete-startup-service
+    type: web
+    runtime: docker
+    dockerfilePath: services/startups/delete/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: FRONTEND_ORIGIN
+        value: https://TU-APP.vercel.app
+
+  # ---------- Technologies ----------
+  - name: create-technology-service
+    type: web
+    runtime: docker
+    dockerfilePath: services/technologies/create/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: FRONTEND_ORIGIN
+        value: https://TU-APP.vercel.app
+
+  - name: read-technology-service
+    type: web
+    runtime: docker
+    dockerfilePath: services/technologies/read/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: FRONTEND_ORIGIN
+        value: https://TU-APP.vercel.app
+
+  - name: update-technology-service
+    type: web
+    runtime: docker
+    dockerfilePath: services/technologies/update/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: FRONTEND_ORIGIN
+        value: https://TU-APP.vercel.app
+
+  - name: delete-technology-service
+    type: web
+    runtime: docker
+    dockerfilePath: services/technologies/delete/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: FRONTEND_ORIGIN
+        value: https://TU-APP.vercel.app
+
+  # ---------- Auth ----------
+  - name: auth-service
+    type: web
+    runtime: docker
+    dockerfilePath: services/auth/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: AUTH_USERNAME
+        value: admin
+      - key: AUTH_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: FRONTEND_ORIGIN
+        value: https://TU-APP.vercel.app
+
+  # ---------- Gateway ----------
+  - name: gateway
+    type: web
+    runtime: docker
+    dockerfilePath: gateway/Dockerfile.render
+    dockerContext: .
+    plan: free
+    healthCheckPath: /status
+    # Sin envVars: gateway/nginx.render.conf tiene las URLs de los 9
+    # microservicios escritas directo (ver comentario arriba) — el
+    # gateway no lee variables de entorno en absoluto.
