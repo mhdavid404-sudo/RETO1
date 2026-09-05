@@ -25,9 +25,9 @@
 #   nunca los escribe aqui. Por consistencia, los otros 4 valores de
 #   conexion a la DB (DB_HOST, DB_PORT, DB_NAME, DB_USER) tambien van
 #   sync: false, aunque solo se pidio ocultar los tres primeros.
-#   AUTH_USERNAME queda en texto plano (no es tan sensible como una
-#   contrasena) — cambiar el valor de abajo o editarlo desde el
-#   dashboard antes de desplegar si hace falta.
+#   AUTH_USERNAME tambien va con sync: false — no debe quedar en texto
+#   plano en un archivo que vive en GitHub, aunque sea menos sensible
+#   que una contrasena.
 # - No se usa envVarGroups (el mecanismo nativo de Render para
 #   compartir variables entre servicios): Render ignora en silencio
 #   cualquier sync: false dentro de un grupo, y casi todo lo que
@@ -234,7 +234,7 @@ services:
     healthCheckPath: /health
     envVars:
       - key: AUTH_USERNAME
-        value: admin
+        sync: false
       - key: AUTH_PASSWORD
         sync: false
       - key: JWT_SECRET
