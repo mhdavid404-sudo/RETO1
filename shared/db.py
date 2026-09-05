@@ -28,6 +28,14 @@ DB_NAME = variable_obligatoria("DB_NAME")
 DB_USER = variable_obligatoria("DB_USER")
 DB_PASSWORD = variable_obligatoria("DB_PASSWORD")
 
+# Opcional, con default "prefer" (el mismo default de psycopg2/libpq):
+# docker-compose.yml no la define, asi que el comportamiento local no
+# cambia en nada. Solo hace falta en produccion contra una DB externa
+# de Render, donde "prefer" no siempre negocia bien la conexion TLS y
+# corta con "SSL connection has been closed unexpectedly" — Render
+# exige TLS explicito en conexiones externas (docs/DECISIONES.md).
+DB_SSLMODE = os.getenv("DB_SSLMODE", "prefer")
+
 
 @contextmanager
 def obtener_cursor(commit: bool = False) -> Iterator["psycopg2.extras.RealDictCursor"]:
@@ -49,6 +57,7 @@ def obtener_cursor(commit: bool = False) -> Iterator["psycopg2.extras.RealDictCu
         dbname=DB_NAME,
         user=DB_USER,
         password=DB_PASSWORD,
+        sslmode=DB_SSLMODE,
     )
     try:
         cursor = conexion.cursor(cursor_factory=psycopg2.extras.RealDictCursor)

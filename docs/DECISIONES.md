@@ -379,3 +379,44 @@ Render (borrado y vuelto a crear, blueprint reaplicado desde cero,
 etc.), hay que volver a verificar su URL real en el dashboard antes de
 asumir que el nombre limpio sigue libre — no es algo que se resuelva
 una sola vez y quede fijo para siempre.
+
+---
+
+## 2026-09-04 — Incidente real: TLS con la DB externa de Render
+
+**Qué pasó:** los 8 servicios CRUD desplegados en Render no podían
+conectar a la base de datos (externa, ya existente, ver decisiones de
+`render.yaml` más arriba) — el error era
+`SSL connection has been closed unexpectedly` durante la negociación
+TLS. Diagnóstico del Product Owner, confirmado contra la documentación
+oficial de Render: las conexiones externas a Postgres en Render exigen
+TLS explícito, y `sslmode=prefer` (el default de psycopg2/libpq, que
+usábamos implícitamente al no pasar `sslmode` en absoluto) no siempre
+negocia bien ese requisito.
+
+**Corrección:** `DB_SSLMODE` nueva en `shared/db.py`, leída con
+`os.getenv("DB_SSLMODE", "prefer")` — default idéntico al
+comportamiento anterior, así que `docker-compose.yml` (que no define
+esta variable) no cambia en nada; se pasa a
+`psycopg2.connect(sslmode=DB_SSLMODE, ...)`. En `render.yaml`, los 8
+servicios CRUD (no `auth-service`, que no toca la DB) reciben
+`DB_SSLMODE: require`. No es secreto — va con valor fijo, sin
+`sync: false`.
+
+**Cómo se aplica:** cualquier variable nueva que solo afecte a un
+entorno (aquí: solo producción contra una DB externa) debe tener un
+default que reproduzca el comportamiento actual, para que agregarla no
+sea un cambio de comportamiento local — mismo principio ya aplicado a
+`DB_HOST`/`DB_PORT` (default `db`/`5432` para desarrollo local) desde
+el principio del proyecto.
+
+**Verificado:** `shared/db.py` compila; creación real de una startup
+contra Postgres local con el nuevo código (sin `DB_SSLMODE` definida,
+igual que antes) sigue devolviendo 201 — comportamiento local
+confirmado sin cambios, no solo argumentado.
+
+**Servicios a redesplegar:** los 8 CRUD (`create`/`read`/`update`/
+`delete` × Startups/Technologies) — cambiaron tanto `shared/db.py`
+(código, empaquetado en cada imagen) como su propia variable de
+entorno en `render.yaml`. `auth-service` y `gateway` no cambiaron, no
+hace falta tocarlos.
