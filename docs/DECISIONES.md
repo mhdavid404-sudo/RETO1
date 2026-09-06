@@ -468,3 +468,118 @@ sin una causa de configuración clara, vale la pena aislar la variable
 Product Owner lo hizo probando la misma DB/credenciales con
 `psycopg` v3 directamente, fuera de este proyecto, antes de pedir el
 cambio aquí.
+
+---
+
+## 2026-09-04 — Incidente real: base de datos original irrecuperable, DB nueva
+
+**Nota:** esta entrada documenta trabajo que hizo directamente el
+Product Owner fuera de esta sesión (en el dashboard de Render, no en
+el repositorio) — se registra aquí por instrucción suya explícita,
+para que la bitácora quede completa, no porque Claude Code lo haya
+ejecutado o verificado de primera mano.
+
+**Qué pasó:** la migración de `psycopg2` a `psycopg` v3 (entrada
+anterior) confirmó que el problema no era la librería cliente en
+abstracto, sino algo irrecuperable en la base de datos Postgres
+original de Render — aislado comparando `psycopg2` contra `psycopg`
+v3 con **la misma DB y las mismas credenciales**: si el fallo persistía
+incluso con la librería que sí funciona en general, la causa ya no
+podía ser la conexión desde el lado del cliente.
+
+**Corrección:** se creó una base de datos Postgres nueva en Render. El
+esquema (`db/init/001_schema.sql` y `002_technologies_schema.sql`) se
+aplicó a mano contra la DB nueva — estos archivos solo se ejecutan
+automáticamente en el primer arranque de un volumen local vía
+`docker-entrypoint-initdb.d` (`docker-compose.yml`); una DB administrada
+de Render, nueva o vieja, siempre requirió aplicarlos a mano desde el
+principio (ver la decisión de `render.yaml`: "la base de datos ya
+existe, creada manualmente"). Las 5 credenciales de conexión de la DB
+nueva se actualizaron directamente en el dashboard de Render, en los 8
+servicios CRUD — son las mismas 5 variables `sync: false`
+(`DB_HOST`/`DB_PORT`/`DB_NAME`/`DB_USER`/`DB_PASSWORD`) que ya existían
+en `render.yaml` desde que se escribió el Blueprint; **no fue necesario
+tocar el archivo**, porque su función es justamente no guardar el valor
+real, solo el nombre de la variable a rellenar.
+
+**Cómo se aplica:** el diseño de `render.yaml` con `sync: false` para
+las 5 credenciales de DB (decisión previa, antes de que este incidente
+ocurriera) resultó ser lo que permitió resolver esto sin ningún commit
+ni redeploy del blueprint — solo redeploy de los 8 servicios CRUD para
+que tomaran las nuevas variables de entorno. Si esas 5 variables
+hubieran tenido valores fijos escritos en el archivo, este incidente
+habría requerido además un commit exponiendo (brevemente, en el
+historial de Git) las credenciales de la DB vieja.
+
+---
+
+## 2026-09-04 — Ajuste final de FRONTEND_ORIGIN tras desplegar en Vercel
+
+**Nota:** igual que la entrada anterior, este ajuste lo hizo el Product
+Owner directamente en el dashboard de Render, no a través de esta
+sesión.
+
+**Qué pasó:** una vez desplegado el frontend en Vercel y conocida su
+URL real, `FRONTEND_ORIGIN` se actualizó en los 9 servicios (los 8 CRUD
++ `auth-service`) para que CORS deje de apuntar al placeholder
+`https://TU-APP.vercel.app` que traía `render.yaml` desde que se
+escribió (ver la decisión de `render.yaml` más arriba) y apunte al
+dominio real del frontend en Vercel.
+
+**Estado conocido, no resuelto todavía:** `FRONTEND_ORIGIN` en
+`render.yaml` sigue literalmente en `https://TU-APP.vercel.app` — el
+valor real se puso a mano en el dashboard de Render, por fuera del
+archivo. El archivo y el estado real de producción están desincronizados
+en este único valor. Esto es aceptable mientras no se vuelva a
+desplegar el Blueprint desde cero (un redeploy de blueprint sí
+sobreescribiría el valor real con el placeholder, porque
+`FRONTEND_ORIGIN` no tiene `sync: false` — es un valor literal, no un
+secreto). Pendiente: actualizar el placeholder en `render.yaml` con la
+URL real de Vercel cuando se disponga de ella, para que el archivo
+vuelva a ser la fuente de verdad completa.
+
+**Cómo se aplica:** a diferencia de las credenciales de DB (`sync:
+false`, entrada anterior), `FRONTEND_ORIGIN` es un valor literal en el
+archivo — por diseño, para que no haya que rellenarlo a mano en el
+dashboard en un despliegue nuevo desde cero. La consecuencia es que
+**si se edita solo en el dashboard sin actualizar también el archivo**,
+un futuro redeploy del blueprint revierte el cambio silenciosamente.
+Este es exactamente el tipo de mecanismo (`sync: false` vs. valor
+literal) que ya se documentó al escribir `render.yaml` — la elección
+correcta depende de si el valor es secreto, no de si cambia con el
+tiempo.
+
+---
+
+## 2026-09-04 — Servicios dormidos en el plan gratuito de Render (502/timeouts intermitentes)
+
+**Qué pasó:** durante las pruebas manuales sobre el sistema desplegado,
+aparecieron 502 y timeouts intermitentes sin patrón aparente — no
+coincidían con ningún bug de código ya conocido (auth, CORS, DB).
+
+**Causa (comportamiento documentado de Render, no un bug del
+proyecto):** los "web services" del plan gratuito de Render se
+duermen tras un período sin tráfico entrante. La primera petición que
+les llega después de dormir no se sirve de inmediato: Render tiene que
+arrancar el contenedor de nuevo ("cold start"), lo que puede tardar
+más que el timeout normal de un cliente HTTP o del propio
+`proxy_read_timeout` de 30s configurado en `gateway/nginx.render.conf`
+— de ahí el 502/timeout. Una segunda petición inmediatamente después,
+con el servicio ya despierto, normalmente responde bien. Con **10
+servicios independientes** (9 microservicios + gateway) en plan
+gratuito, cualquiera de ellos puede estar dormido en un momento dado,
+así que el síntoma aparece en puntos distintos del flujo cada vez.
+
+**No se "corrigió" con código** — es una limitación conocida y
+aceptada del plan gratuito, no un defecto del sistema. La alternativa
+(planes pagos que no duermen) ya se descartó antes por costo, en la
+misma decisión que llevó a los 10 servicios como `web` en vez de
+`pserv` (ver más arriba).
+
+**Cómo se aplica:** al hacer pruebas manuales o evidencias para el
+README, conviene "despertar" el sistema con una petición de
+calentamiento (ej. pegarle a `/status` del gateway y a `/health` de
+cada microservicio) y esperar unos segundos antes de correr las
+pruebas reales, en vez de interpretar el primer 502 como un bug.
+Documentar esto también como limitación conocida en la sección
+correspondiente del README (brief sección 9) cuando se escriba.
