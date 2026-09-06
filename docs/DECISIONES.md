@@ -526,17 +526,13 @@ URL real, `FRONTEND_ORIGIN` se actualizó en los 9 servicios (los 8 CRUD
 escribió (ver la decisión de `render.yaml` más arriba) y apunte al
 dominio real del frontend en Vercel.
 
-**Estado conocido, no resuelto todavía:** `FRONTEND_ORIGIN` en
-`render.yaml` sigue literalmente en `https://TU-APP.vercel.app` — el
-valor real se puso a mano en el dashboard de Render, por fuera del
-archivo. El archivo y el estado real de producción están desincronizados
-en este único valor. Esto es aceptable mientras no se vuelva a
-desplegar el Blueprint desde cero (un redeploy de blueprint sí
-sobreescribiría el valor real con el placeholder, porque
-`FRONTEND_ORIGIN` no tiene `sync: false` — es un valor literal, no un
-secreto). Pendiente: actualizar el placeholder en `render.yaml` con la
-URL real de Vercel cuando se disponga de ella, para que el archivo
-vuelva a ser la fuente de verdad completa.
+**Resuelto:** el drift entre `render.yaml` (placeholder) y el valor
+real en el dashboard de Render duró desde que se escribió el Blueprint
+hasta que se conoció la URL real del frontend
+(`https://reto-1-gamma.vercel.app`). En cuanto se tuvo esa URL, se
+actualizó también en `render.yaml` (los 9 `value: FRONTEND_ORIGIN`) —
+el archivo volvió a ser la fuente de verdad completa, ya no depende de
+que el dashboard y el repo coincidan por casualidad.
 
 **Cómo se aplica:** a diferencia de las credenciales de DB (`sync:
 false`, entrada anterior), `FRONTEND_ORIGIN` es un valor literal en el

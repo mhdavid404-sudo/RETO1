@@ -37,9 +37,11 @@
 # - Nombres de servicio identicos a los de docker-compose.yml y a los
 #   upstreams de gateway/nginx.conf (desarrollo local).
 #
-# FRONTEND_ORIGIN: reemplazar "https://TU-APP.vercel.app" en cada
-# servicio de abajo con la URL real del frontend una vez desplegado en
-# Vercel (brief: Opcion B — ver docs/DECISIONES.md).
+# FRONTEND_ORIGIN: https://reto-1-gamma.vercel.app — URL real del
+# frontend en Vercel (brief: Opcion B — ver docs/DECISIONES.md). Si el
+# frontend se redespliega en un dominio distinto, actualizar aqui Y en
+# el dashboard de Render (este valor no es sync: false, un redeploy
+# del blueprint sin actualizar el archivo revertiria el cambio).
 
 services:
   # ---------- Startups ----------
@@ -66,7 +68,7 @@ services:
       - key: JWT_SECRET
         sync: false
       - key: FRONTEND_ORIGIN
-        value: https://TU-APP.vercel.app
+        value: https://reto-1-gamma.vercel.app
 
   - name: read-startup-service
     type: web
@@ -89,7 +91,7 @@ services:
       - key: DB_SSLMODE
         value: require
       - key: FRONTEND_ORIGIN
-        value: https://TU-APP.vercel.app
+        value: https://reto-1-gamma.vercel.app
 
   - name: update-startup-service
     type: web
@@ -114,7 +116,7 @@ services:
       - key: JWT_SECRET
         sync: false
       - key: FRONTEND_ORIGIN
-        value: https://TU-APP.vercel.app
+        value: https://reto-1-gamma.vercel.app
 
   - name: delete-startup-service
     type: web
@@ -139,7 +141,7 @@ services:
       - key: JWT_SECRET
         sync: false
       - key: FRONTEND_ORIGIN
-        value: https://TU-APP.vercel.app
+        value: https://reto-1-gamma.vercel.app
 
   # ---------- Technologies ----------
   - name: create-technology-service
@@ -165,7 +167,7 @@ services:
       - key: JWT_SECRET
         sync: false
       - key: FRONTEND_ORIGIN
-        value: https://TU-APP.vercel.app
+        value: https://reto-1-gamma.vercel.app
 
   - name: read-technology-service
     type: web
@@ -188,7 +190,7 @@ services:
       - key: DB_SSLMODE
         value: require
       - key: FRONTEND_ORIGIN
-        value: https://TU-APP.vercel.app
+        value: https://reto-1-gamma.vercel.app
 
   - name: update-technology-service
     type: web
@@ -213,7 +215,7 @@ services:
       - key: JWT_SECRET
         sync: false
       - key: FRONTEND_ORIGIN
-        value: https://TU-APP.vercel.app
+        value: https://reto-1-gamma.vercel.app
 
   - name: delete-technology-service
     type: web
@@ -238,7 +240,7 @@ services:
       - key: JWT_SECRET
         sync: false
       - key: FRONTEND_ORIGIN
-        value: https://TU-APP.vercel.app
+        value: https://reto-1-gamma.vercel.app
 
   # ---------- Auth ----------
   - name: auth-service
@@ -256,7 +258,7 @@ services:
       - key: JWT_SECRET
         sync: false
       - key: FRONTEND_ORIGIN
-        value: https://TU-APP.vercel.app
+        value: https://reto-1-gamma.vercel.app
 
   # ---------- Gateway ----------
   - name: gateway
