@@ -1,0 +1,394 @@
+{
+  "info": {
+    "name": "RETO1 — Microservicios CRUD",
+    "description": "Colección de casos mínimos de prueba para Startups, Technologies y Auth. Antes de usarla: llena las variables 'authUsername' y 'authPassword' en Postman (Environment o Variables de la colección) con tus credenciales reales — nunca las escribas directo en la colección, este archivo se sube a un repositorio público.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://gateway-fswl.onrender.com/v1/api" },
+    { "key": "authUsername", "value": "" },
+    { "key": "authPassword", "value": "" },
+    { "key": "token", "value": "" },
+    { "key": "startupId", "value": "" },
+    { "key": "technologyId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login correcto",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Login exitoso, devuelve token', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.token).to.be.a('string');",
+                  "    pm.collectionVariables.set('token', json.token);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{authUsername}}\",\n  \"password\": \"{{authPassword}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "Login incorrecto (password mala)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Rechaza credenciales incorrectas con mensaje generico', function () {",
+                  "    pm.response.to.have.status(401);",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.message).to.eql('Credenciales invalidas');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{authUsername}}\",\n  \"password\": \"password_incorrecta_a_proposito\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Startups",
+      "item": [
+        {
+          "name": "1. Crear registro valido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201 Created, guarda el id', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    var json = pm.response.json();",
+                  "    pm.collectionVariables.set('startupId', json.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Prueba Postman\",\n  \"foundedAt\": \"2024-01-01\",\n  \"location\": \"CDMX\",\n  \"category\": \"Software\",\n  \"fundingAmount\": 1000000\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/startups/create", "host": ["{{baseUrl}}"], "path": ["startups", "create"] }
+          }
+        },
+        {
+          "name": "2. Crear registro invalido (falta name)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('400 Validation error', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().message).to.eql('Validation error');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"foundedAt\": \"2024-01-01\"\n}" },
+            "url": { "raw": "{{baseUrl}}/startups/create", "host": ["{{baseUrl}}"], "path": ["startups", "create"] }
+          }
+        },
+        {
+          "name": "3. Listar sin filtros",
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('200 OK, devuelve lista', function () { pm.response.to.have.status(200); pm.expect(pm.response.json()).to.be.an('array'); });"] } }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/startups/read", "host": ["{{baseUrl}}"], "path": ["startups", "read"] }
+          }
+        },
+        {
+          "name": "4. Listar con filtros",
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('200 OK con filtro aplicado', function () { pm.response.to.have.status(200); });"] } }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/startups/read?category=Software",
+              "host": ["{{baseUrl}}"],
+              "path": ["startups", "read"],
+              "query": [{ "key": "category", "value": "Software" }]
+            }
+          }
+        },
+        {
+          "name": "5. Leer detalle - ID correcto",
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('200 OK, trae el registro', function () { pm.response.to.have.status(200); });"] } }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/startups/read/{{startupId}}", "host": ["{{baseUrl}}"], "path": ["startups", "read", "{{startupId}}"] }
+          }
+        },
+        {
+          "name": "6. Leer detalle - ID incorrecto",
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('404 Not Found', function () { pm.response.to.have.status(404); });"] } }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/startups/read/999999", "host": ["{{baseUrl}}"], "path": ["startups", "read", "999999"] }
+          }
+        },
+        {
+          "name": "7. Actualizar - campos permitidos",
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('200 OK, campo actualizado', function () { pm.response.to.have.status(200); pm.expect(pm.response.json().location).to.eql('Guadalajara'); });"] } }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"location\": \"Guadalajara\"\n}" },
+            "url": { "raw": "{{baseUrl}}/startups/update/{{startupId}}", "host": ["{{baseUrl}}"], "path": ["startups", "update", "{{startupId}}"] }
+          }
+        },
+        {
+          "name": "8. Actualizar - campo no permitido",
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('400 Validation error, campo rechazado', function () { pm.response.to.have.status(400); });"] } }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"campo_que_no_existe\": \"valor\"\n}" },
+            "url": { "raw": "{{baseUrl}}/startups/update/{{startupId}}", "host": ["{{baseUrl}}"], "path": ["startups", "update", "{{startupId}}"] }
+          }
+        },
+        {
+          "name": "9. Eliminar registro existente",
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('204 No Content', function () { pm.response.to.have.status(204); });"] } }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/startups/delete/{{startupId}}", "host": ["{{baseUrl}}"], "path": ["startups", "delete", "{{startupId}}"] }
+          }
+        },
+        {
+          "name": "10. Eliminar registro inexistente",
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('404 Not Found', function () { pm.response.to.have.status(404); });"] } }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/startups/delete/{{startupId}}", "host": ["{{baseUrl}}"], "path": ["startups", "delete", "{{startupId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Technologies",
+      "item": [
+        {
+          "name": "1. Crear registro valido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201 Created, guarda el id', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    var json = pm.response.json();",
+                  "    pm.collectionVariables.set('technologyId', json.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Prueba Postman\",\n  \"sector\": \"Software\",\n  \"description\": \"Tecnologia de prueba\",\n  \"adoptionLevel\": \"high\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/technologies/create", "host": ["{{baseUrl}}"], "path": ["technologies", "create"] }
+          }
+        },
+        {
+          "name": "2. Crear registro invalido (falta name)",
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('400 Validation error', function () { pm.response.to.have.status(400); });"] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"sector\": \"Software\"\n}" },
+            "url": { "raw": "{{baseUrl}}/technologies/create", "host": ["{{baseUrl}}"], "path": ["technologies", "create"] }
+          }
+        },
+        {
+          "name": "3. Listar sin filtros",
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('200 OK, devuelve lista', function () { pm.response.to.have.status(200); });"] } }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/technologies/read", "host": ["{{baseUrl}}"], "path": ["technologies", "read"] }
+          }
+        },
+        {
+          "name": "4. Listar con filtros",
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('200 OK con filtro aplicado', function () { pm.response.to.have.status(200); });"] } }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/technologies/read?sector=Software",
+              "host": ["{{baseUrl}}"],
+              "path": ["technologies", "read"],
+              "query": [{ "key": "sector", "value": "Software" }]
+            }
+          }
+        },
+        {
+          "name": "5. Leer detalle - ID correcto",
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('200 OK, trae el registro', function () { pm.response.to.have.status(200); });"] } }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/technologies/read/{{technologyId}}", "host": ["{{baseUrl}}"], "path": ["technologies", "read", "{{technologyId}}"] }
+          }
+        },
+        {
+          "name": "6. Leer detalle - ID incorrecto",
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('404 Not Found', function () { pm.response.to.have.status(404); });"] } }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/technologies/read/999999", "host": ["{{baseUrl}}"], "path": ["technologies", "read", "999999"] }
+          }
+        },
+        {
+          "name": "7. Actualizar - campos permitidos",
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('200 OK, campo actualizado', function () { pm.response.to.have.status(200); });"] } }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"description\": \"Descripcion actualizada\"\n}" },
+            "url": { "raw": "{{baseUrl}}/technologies/update/{{technologyId}}", "host": ["{{baseUrl}}"], "path": ["technologies", "update", "{{technologyId}}"] }
+          }
+        },
+        {
+          "name": "8. Actualizar - campo no permitido",
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('400 Validation error, campo rechazado', function () { pm.response.to.have.status(400); });"] } }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"campo_que_no_existe\": \"valor\"\n}" },
+            "url": { "raw": "{{baseUrl}}/technologies/update/{{technologyId}}", "host": ["{{baseUrl}}"], "path": ["technologies", "update", "{{technologyId}}"] }
+          }
+        },
+        {
+          "name": "9. Eliminar registro existente",
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('204 No Content', function () { pm.response.to.have.status(204); });"] } }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/technologies/delete/{{technologyId}}", "host": ["{{baseUrl}}"], "path": ["technologies", "delete", "{{technologyId}}"] }
+          }
+        },
+        {
+          "name": "10. Eliminar registro inexistente",
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('404 Not Found', function () { pm.response.to.have.status(404); });"] } }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/technologies/delete/{{technologyId}}", "host": ["{{baseUrl}}"], "path": ["technologies", "delete", "{{technologyId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Extra - Seguridad",
+      "item": [
+        {
+          "name": "Crear sin token (401)",
+          "event": [
+            { "listen": "test", "script": { "exec": ["pm.test('401 sin token', function () { pm.response.to.have.status(401); });"] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"No deberia crearse\",\n  \"foundedAt\": \"2024-01-01\"\n}" },
+            "url": { "raw": "{{baseUrl}}/startups/create", "host": ["{{baseUrl}}"], "path": ["startups", "create"] }
+          }
+        }
+      ]
+    }
+  ]
+}
