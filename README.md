@@ -409,6 +409,7 @@ Colección de Postman / scripts curl completos: [`docs/evidencias/postman/`](doc
 | Rama principal | `master` |
 | Historial | Commits desde el primer día del proyecto, con mensajes descriptivos |
 | Acceso | Público |
+| Commit recomendado para revisión | [`03bfab0`](https://github.com/mhdavid404-sudo/RETO1/commit/03bfab0) — fix: render.yaml con URL real de Vercel + corrige encoding en .env.example (HEAD de `master`, coincide con `origin/master`) |
 
 ```bash
 git clone https://github.com/mhdavid404-sudo/RETO1.git
